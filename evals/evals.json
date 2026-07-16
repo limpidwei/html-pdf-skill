@@ -1,0 +1,22 @@
+{
+  "evals": [
+    {
+      "name": "upload-html-to-pdf",
+      "prompt": "用户上传了一个名为 slides.html 的文件，并说：帮我把它转成 PDF。",
+      "expected_skill": "html-pdf",
+      "expected_behavior": "识别本地 HTML 文件路径，运行 setup_env.py 检查环境，执行 python -m html_pdf --input slides.html --output-dir ./pdf-output，并返回 output.pdf 路径。"
+    },
+    {
+      "name": "url-to-pdf-hd",
+      "prompt": "用户说：把这个网页 https://example.com/report.html 导出成高清 PDF。",
+      "expected_skill": "html-pdf",
+      "expected_behavior": "识别 URL 输入，运行转换命令并带上 --hd 参数，生成 output.pdf 和 output-hd.pdf。"
+    },
+    {
+      "name": "html-to-pdf-conversion-intent",
+      "prompt": "用户说：我有一个 HTML 幻灯片，想转成 PDF 保存。",
+      "expected_skill": "html-pdf",
+      "expected_behavior": "询问或确认 HTML 文件路径/URL，然后调用 html-pdf skill 执行转换。"
+    }
+  ]
+}
