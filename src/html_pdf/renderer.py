@@ -46,7 +46,12 @@ def render_at_scale(
             device_scale_factor=scale,
         )
         page = context.new_page()
-        page.goto(html_path.resolve().as_uri(), wait_until="networkidle")
+        # networkidle can hang on pages with websockets/long-polling; fall back to load
+        try:
+            page.goto(html_path.resolve().as_uri(), wait_until="networkidle", timeout=30000)
+        except Exception:
+            print("WARNING: networkidle timed out, falling back to load event")
+            page.goto(html_path.resolve().as_uri(), wait_until="load", timeout=60000)
         page.wait_for_timeout(wait_time)
 
         # Remove deck transform scaling and hide UI overlays
@@ -110,8 +115,9 @@ def render_pages(
     html_path: Path,
     out_dir: Path,
     hd: bool = False,
+    wait_time: int = 3000,
 ) -> tuple[List[Path], List[Path]]:
     """Render standard (1x) and optionally HD (2x) screenshots."""
-    standard = render_at_scale(html_path, out_dir / "standard", scale=1)
-    high_def = render_at_scale(html_path, out_dir / "hd", scale=2) if hd else []
+    standard = render_at_scale(html_path, out_dir / "standard", scale=1, wait_time=wait_time)
+    high_def = render_at_scale(html_path, out_dir / "hd", scale=2, wait_time=wait_time) if hd else []
     return standard, high_def

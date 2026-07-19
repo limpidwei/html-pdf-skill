@@ -2,13 +2,22 @@
 
 import argparse
 import sys
+import time
 from pathlib import Path
 
 from .check_deps import check_all, check_python, print_status
-from .fetcher import prepare_input
+from .fetcher import is_url, prepare_input
 from .install_deps import ensure_dependencies
 from .pdf_builder import build_pdf
 from .renderer import render_pages
+
+
+def default_output_dir(input_value: str) -> Path:
+    """Default output: input file's directory for local files, ~/html-pdf-output/<ts>/ for URLs."""
+    if is_url(input_value):
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        return Path.home() / "html-pdf-output" / stamp
+    return Path(input_value).expanduser().resolve().parent
 
 
 def main(argv=None) -> int:
@@ -24,8 +33,9 @@ def main(argv=None) -> int:
     parser.add_argument(
         "--output-dir",
         "-o",
-        required=True,
-        help="Directory for output PDFs and intermediate files",
+        default=None,
+        help="Directory for output PDFs and intermediate files "
+        "(default: input file's directory, or ~/html-pdf-output/<timestamp>/ for URLs)",
     )
     parser.add_argument(
         "--hd",
@@ -62,7 +72,11 @@ def main(argv=None) -> int:
             ensure_dependencies()
             print("Dependencies ready.")
 
-    out_dir = Path(args.output_dir).expanduser().resolve()
+    out_dir = (
+        Path(args.output_dir).expanduser().resolve()
+        if args.output_dir
+        else default_output_dir(args.input)
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -75,6 +89,7 @@ def main(argv=None) -> int:
             html_path,
             out_dir / "screenshots",
             hd=args.hd,
+            wait_time=args.wait,
         )
 
         std_pdf = out_dir / "output.pdf"

@@ -55,19 +55,22 @@ cp -R . ~/.claude/skills/html-pdf
 ### 命令行独立使用
 
 ```bash
-# 标准清晰度
-python -m html_pdf --input ./slides.html --output-dir ./pdf-output
+# 标准清晰度（本地文件，默认输出到文件所在目录）
+python -m html_pdf --input ./slides.html
 
 # 同时生成 2x 高清版
 python -m html_pdf --input ./slides.html --output-dir ./pdf-output --hd
 
-# URL 输入
-python -m html_pdf --input https://example.com/page.html --output-dir ./pdf-output --hd
+# URL 输入（默认输出到 ~/html-pdf-output/<timestamp>/）
+python -m html_pdf --input https://example.com/page.html --hd
+
+# 页面加载慢时加大等待时间（毫秒）
+python -m html_pdf --input ./slides.html --wait 5000
 ```
 
 输出文件：
-- `pdf-output/output.pdf` — 标准版（与原始 HTML 同分辨率）
-- `pdf-output/output-hd.pdf` — 高清版（2x 分辨率）
+- `output.pdf` — 标准版（与原始 HTML 同分辨率）
+- `output-hd.pdf` — 高清版（2x 分辨率，仅在 `--hd` 时生成）
 
 ## 跨平台说明
 
@@ -78,21 +81,27 @@ python -m html_pdf --input https://example.com/page.html --output-dir ./pdf-outp
 
 ## 自动触发 Hook（可选）
 
-如需更可靠的自动触发，可在 `~/.claude/settings.json` 中添加：
+如需在用户提到 HTML 转 PDF 时给 Claude 额外提示，可在 `~/.claude/settings.json` 中添加（Claude Code 真实支持的 hook 格式）：
 
 ```json
 {
   "hooks": {
     "UserPromptSubmit": [
       {
-        "name": "html-pdf-trigger",
-        "pattern": "(?i)\\.(html?|htm)\\b|convert\\s+.*html\\s+.*pdf|html\\s+to\\s+pdf|save\\s+html\\s+pdf|print\\s+html|pdf\\s+of\\s+html|slide\\s+.*pdf|presentation\\s+.*pdf",
-        "skill": "html-pdf"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:/Users/<用户名>/.claude/skills/html-pdf/scripts/hook_trigger.py\""
+          }
+        ]
       }
     ]
   }
 }
 ```
+
+`hook_trigger.py` 从 stdin 读取 prompt JSON，命中 HTML→PDF 意图时输出 `additionalContext`，提示 Claude 调用本 skill；未命中时静默退出。macOS/Linux 下把路径换成 `~/.claude/skills/html-pdf/scripts/hook_trigger.py`。
 
 ## 项目结构
 
@@ -103,7 +112,8 @@ html-pdf-skill/
 ├── pyproject.toml            # Python 包配置
 ├── requirements.txt          # 依赖列表
 ├── scripts/
-│   └── setup_env.py          # 一键环境检测与安装
+│   ├── setup_env.py          # 一键环境检测与安装
+│   └── hook_trigger.py       # UserPromptSubmit hook（可选自动触发）
 └── src/html_pdf/
     ├── __init__.py
     ├── __main__.py           # CLI 入口
