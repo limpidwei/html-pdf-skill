@@ -9,6 +9,7 @@ from .check_deps import check_all, check_python, print_status
 from .fetcher import is_url, prepare_input
 from .install_deps import ensure_dependencies
 from .pdf_builder import build_pdf
+from .printer import print_pdf
 from .renderer import render_pages
 
 
@@ -48,10 +49,23 @@ def main(argv=None) -> int:
         help="Skip dependency checks and installation",
     )
     parser.add_argument(
+        "--mode",
+        choices=["raster", "print"],
+        default="raster",
+        help="raster (default): screenshot+img2pdf, pixel-perfect for slides/decks, "
+        "output is image-only; print: Chromium print engine, selectable text, "
+        "best for articles/text documents",
+    )
+    parser.add_argument(
+        "--landscape",
+        action="store_true",
+        help="Print mode only: landscape page orientation",
+    )
+    parser.add_argument(
         "--wait",
         type=int,
         default=3000,
-        help="Milliseconds to wait after networkidle before screenshots (default: 3000)",
+        help="Milliseconds to wait after networkidle before capture (default: 3000)",
     )
 
     args = parser.parse_args(argv)
@@ -84,20 +98,26 @@ def main(argv=None) -> int:
         html_path = prepare_input(args.input, out_dir / "work")
         print(f"Localized HTML: {html_path}")
 
-        print("Rendering pages...")
-        std_pngs, hd_pngs = render_pages(
-            html_path,
-            out_dir / "screenshots",
-            hd=args.hd,
-            wait_time=args.wait,
-        )
-
         std_pdf = out_dir / "output.pdf"
-        build_pdf(std_pngs, std_pdf)
 
-        if args.hd:
-            hd_pdf = out_dir / "output-hd.pdf"
-            build_pdf(hd_pngs, hd_pdf)
+        if args.mode == "print":
+            if args.hd:
+                print("NOTE: --hd is ignored in print mode (vector output is resolution-independent)")
+            print("Printing to PDF (text mode)...")
+            print_pdf(html_path, std_pdf, wait_time=args.wait, landscape=args.landscape)
+        else:
+            print("Rendering pages...")
+            std_pngs, hd_pngs = render_pages(
+                html_path,
+                out_dir / "screenshots",
+                hd=args.hd,
+                wait_time=args.wait,
+            )
+            build_pdf(std_pngs, std_pdf)
+
+            if args.hd:
+                hd_pdf = out_dir / "output-hd.pdf"
+                build_pdf(hd_pngs, hd_pdf)
 
         # Validate outputs
         if not std_pdf.exists() or std_pdf.stat().st_size == 0:
@@ -105,8 +125,8 @@ def main(argv=None) -> int:
 
         print("\nDone.")
         print(f"  Standard PDF: {std_pdf}")
-        if args.hd:
-            print(f"  HD PDF:       {hd_pdf}")
+        if args.hd and args.mode != "print":
+            print(f"  HD PDF:       {out_dir / 'output-hd.pdf'}")
 
         return 0
 

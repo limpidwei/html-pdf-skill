@@ -41,6 +41,7 @@ Thumbs.db
 pdf-output/
 html-pdf-output/
 *.pdf
+.tmp-test/
 
 # Playwright
 .playwright/
